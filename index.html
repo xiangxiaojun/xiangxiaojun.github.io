@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+    <script>
+        async function redirectToTarget() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUrl = urlParams.get('https://itlab.ctgu.edu.cn/labapi/login?next=https://xiangxiaojun.github.io');
+            const hasRedirected = sessionStorage.getItem('hasRedirected');
+
+            if (!hasRedirected && targetUrl) {
+                try {
+                    const response = await fetch(targetUrl, { method: 'GET' });
+                    const data = await response.json();
+                    if (response.ok) {
+                        // 设置标志，表示已经重定向过
+                        sessionStorage.setItem('hasRedirected', 'true');
+
+                        // 发送消息回小程序
+                        if (typeof wx !== 'undefined' && wx.miniProgram) {
+                            wx.miniProgram.postMessage({ data });
+                        }
+                    } else {
+                        console.error('请求失败:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('请求出错:', error);
+                }
+            } else {
+                console.log('已经重定向过，不再执行重定向逻辑');
+            }
+        }
+
+        // 页面加载完成后执行跳转
+        window.onload = redirectToTarget;
+    </script>
+</head>
+
+<body>
+    <h1>正在跳转，请稍候...</h1>
+</body>
+
+</html>
