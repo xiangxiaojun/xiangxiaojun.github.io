@@ -7,7 +7,8 @@
     <script>
         async function redirectToTarget() {
             const urlParams = new URLSearchParams(window.location.search);
-            const targetUrl = urlParams.get('https://itlab.ctgu.edu.cn/labapi/login?next=https://xiangxiaojun.github.io');
+            const targetUrl = "https://itlab.ctgu.edu.cn/labapi/login?next=https://xiangxiaojun.github.io/"
+            // const targetUrl = urlParams.get('url');
             const hasRedirected = sessionStorage.getItem('hasRedirected');
 
             if (!hasRedirected && targetUrl) {
