@@ -5,31 +5,71 @@
     <meta charset="UTF-8">
     <title>登录</title>
     <script>
+        // 劫持 fetch 方法
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            console.log('拦截到的请求:', args[0]); // 打印请求的 URL
+
+            try {
+                const response = await originalFetch(...args);
+                const clonedResponse = response.clone(); // 克隆响应以便后续使用
+
+                // 解析响应数据
+                const responseData = await clonedResponse.json();
+                console.log('拦截到的响应:', responseData);
+
+                // 发送请求信息到小程序
+                if (typeof wx !== 'undefined' && wx.miniProgram) {
+                    wx.miniProgram.postMessage({
+                        data: {
+                            type: 'networkRequest',
+                            url: args[0],
+                            method: args[1]?.method || 'GET',
+                            status: response.status,
+                            response: responseData
+                        }
+                    });
+                }
+
+                return response; // 返回原始响应
+            } catch (error) {
+                console.error('请求出错:', error);
+
+                // 如果需要，将错误信息发送到小程序
+                if (typeof wx !== 'undefined' && wx.miniProgram) {
+                    wx.miniProgram.postMessage({
+                        data: {
+                            type: 'networkError',
+                            url: args[0],
+                            error: error.message
+                        }
+                    });
+                }
+
+                throw error; // 抛出错误以保持原有行为
+            }
+        };
+
         async function redirectToTarget() {
             const urlParams = new URLSearchParams(window.location.search);
             const targetUrl = urlParams.get('url');
             if (targetUrl) {
                 try {
                     const response = await fetch(targetUrl, { method: 'GET' });
-                    const data = await response.json();
-                    wx.miniProgram.postMessage({ data });
                     if (response.ok) {
-                        // 发送消息回小程序
-                        if (typeof wx !== 'undefined' && wx.miniProgram) {
-                            wx.miniProgram.postMessage({ data });
-                        }
+                        console.log('重定向请求成功');
                     } else {
-                        console.error('请求失败:', response.statusText);
+                        console.error('重定向请求失败:', response.statusText);
                     }
                 } catch (error) {
-                    console.error('请求出错:', error);
+                    console.error('重定向请求出错:', error);
                 }
             } else {
                 alert('缺少必要的参数');
             }
         }
 
-        // 页面加载完成后执行跳转
+        // 页面加载完成后执行
         window.onload = redirectToTarget;
     </script>
 </head>
