@@ -5,6 +5,47 @@
     <meta charset="UTF-8">
     <title>登录</title>
     <script>
+        // 劫持 fetch 方法
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            console.log('拦截到 fetch 请求:', args[0]); // 打印请求 URL 和配置
+            try {
+                const response = await originalFetch(...args);
+                const clonedResponse = response.clone(); // 克隆响应
+                const responseData = await clonedResponse.text(); // 获取响应数据（文本或 JSON）
+
+                console.log('fetch 响应:', {
+                    url: args[0],
+                    status: response.status,
+                    data: responseData,
+                });
+
+                return response; // 返回原始响应，保持原始功能
+            } catch (error) {
+                console.error('fetch 请求出错:', error);
+                throw error; // 抛出错误以维持原行为
+            }
+        };
+
+        // 劫持 XMLHttpRequest 方法
+        const originalXhrOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this._requestUrl = url; // 保存请求 URL
+            return originalXhrOpen.call(this, method, url, ...rest);
+        };
+
+        const originalXhrSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function (body) {
+            this.addEventListener('load', function () {
+                console.log('XMLHttpRequest 响应:', {
+                    url: this._requestUrl,
+                    status: this.status,
+                    response: this.responseText,
+                });
+            });
+            return originalXhrSend.call(this, body);
+        };
+
         async function redirectToTarget() {
             const urlParams = new URLSearchParams(window.location.search);
             const targetUrl = urlParams.get('url');
@@ -12,17 +53,19 @@
                 try {
                     const response = await fetch(targetUrl, { method: 'GET' });
                     const data = await response.json();
-                    wx.miniProgram.postMessage({ data });
+
                     if (response.ok) {
-                        // 发送消息回小程序
+                        console.log('重定向成功，响应数据:', data);
+
+                        // 发送消息到小程序
                         if (typeof wx !== 'undefined' && wx.miniProgram) {
                             wx.miniProgram.postMessage({ data });
                         }
                     } else {
-                        console.error('请求失败:', response.statusText);
+                        console.error('重定向请求失败:', response.statusText);
                     }
                 } catch (error) {
-                    console.error('请求出错:', error);
+                    console.error('重定向请求出错:', error);
                 }
             } else {
                 alert('缺少必要的参数');
